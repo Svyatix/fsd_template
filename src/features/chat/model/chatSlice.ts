@@ -1,15 +1,20 @@
-// src/features/chat/model/chatSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { ChatState } from '@app/providers/StoreProvider/config/StateSchema';
 
-const initialState: ChatState = { messages: [] };
+const initialState: ChatState = {
+    messages: [],
+};
 
 export const chatSlice = createSlice({
     name: 'chat',
     initialState,
     reducers: {
-        push: (state, action: PayloadAction<string>) => {
+        // Добавляем сообщение в конец списка
+        pushMessage: (state, action: PayloadAction<string>) => {
             state.messages.push(action.payload);
+        },
+        clearMessages: (state) => {
+            state.messages = [];
         },
     },
 });

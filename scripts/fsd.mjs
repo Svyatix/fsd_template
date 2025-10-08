@@ -1,44 +1,68 @@
 #!/usr/bin/env node
-import fs from 'fs'
-import path from 'path'
-import url from 'url'
+import { mkdirSync, existsSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
-const root = path.resolve(__dirname, '..')
+// ----- paths
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const root = path.resolve(__dirname, '..');
 
-const TYPES = ['feature', 'entity', 'page', 'widget']
+// ----- args & validation
+const TYPES = new Set(['feature', 'entity', 'page', 'widget']);
+const [, , typeArg, nameArg] = process.argv;
 
-const [,, typeArg, nameArg] = process.argv
-if (!typeArg || !nameArg || !TYPES.includes(typeArg)) {
-  console.log('Usage: npm run fsd:gen -- <type> <name>')
-  console.log('Types:', TYPES.join(', '))
-  process.exit(1)
+if (!typeArg || !nameArg || !TYPES.has(typeArg)) {
+  console.log('Usage: npm run fsd:gen -- <type> <name>');
+  console.log('Types: feature, entity, page, widget');
+  process.exit(1);
 }
 
-const layerMap = { feature: 'features', entity: 'entities', page: 'pages', widget: 'widgets' }
-const layer = layerMap[typeArg]
-const base = path.join(root, 'src', layer, nameArg)
+const layerMap = {
+  feature: 'features',
+  entity: 'entities',
+  page: 'pages',
+  widget: 'widgets',
+};
 
-ensureDir(base)
-const C = pascal(nameArg)
+// поддержка вложенных путей в имени (например, "auth/login")
+const layerDir = layerMap[typeArg];
+const base = path.join(root, 'src', layerDir, nameArg);
+
+// имя компонента берём из последнего сегмента пути
+const componentName = toPascalCase(path.basename(nameArg));
+
+// ----- templates
 const files = {
   'index.ts': `export * from './ui';\nexport * as model from './model';\n`,
   'model/index.ts': `// Public API of ${typeArg} ${nameArg}\n`,
-  'model/types.ts': `export type ${C}Id = string;\n`,
-  'ui/index.ts': `export * from './${C}.tsx'\n`,
-  'ui/'+C+'.tsx': `import React from 'react'\nimport styled from 'styled-components'\nconst Box = styled.div\`padding:12px;border:1px solid #e5e7eb;border-radius:12px\`\nexport const ${C}: React.FC = () => <Box>${C} (${typeArg})</Box>\n`
-}
+  'model/types.ts': `export type ${componentName}Id = string;\n`,
+  'ui/index.ts': `export * from './${componentName}.tsx'\n`,
+  [`ui/${componentName}.tsx`]: `import React from 'react'\nimport styled from 'styled-components'\n\nconst Box = styled.div\`padding:12px;border:1px solid #e5e7eb;border-radius:12px\`\n\nexport const ${componentName}: React.FC = () => <Box>${componentName} (${typeArg})</Box>\n`,
+};
 
+// ----- write files
+ensureDir(base);
 for (const [rel, content] of Object.entries(files)) {
-  const dest = path.join(base, rel)
-  ensureDir(path.dirname(dest))
-  if (!fs.existsSync(dest)) {
-    fs.writeFileSync(dest, content)
-    console.log('created', path.relative(root, dest))
+  const dest = path.join(base, rel);
+  ensureDir(path.dirname(dest));
+  if (!existsSync(dest)) {
+    writeFileSync(dest, content);
+    console.log('created', path.relative(root, dest));
   } else {
-    console.log('exists ', path.relative(root, dest))
+    console.log('exists ', path.relative(root, dest));
   }
 }
 
-function ensureDir(dir) { fs.mkdirSync(dir, { recursive: true }) }
-function pascal(str) { return str.split(/[-_\s]+/).map(s => s.charAt(0).toUpperCase()+s.slice(1)).join('') }
+// ----- helpers
+function ensureDir(dir) {
+  mkdirSync(dir, { recursive: true });
+}
+
+function toPascalCase(s) {
+  return s
+      .split(/[\\/._-]+/) // делим по / \ . _ -
+      .filter(Boolean)
+      .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+      .join('');
+}

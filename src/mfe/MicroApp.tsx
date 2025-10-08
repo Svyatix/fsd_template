@@ -1,6 +1,6 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom'
-import { StoreProvider } from '@app/providers'
+import { StoreProvider } from '@app/providers/StoreProvider'
 import { HomePage } from '@pages/home'
 import { AboutPage } from '@pages/about'
 

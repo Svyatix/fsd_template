@@ -38,6 +38,7 @@ module.exports = {
   rules: {
     'react/react-in-jsx-scope': 'off',
     'import/no-unresolved': 'off',
+    'ts-ignore': 'on',
     'boundaries/element-types': ['error', { message: 'Invalid import across FSD layers' }]
   }
 }
